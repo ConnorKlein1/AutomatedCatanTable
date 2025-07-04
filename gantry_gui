@@ -1,0 +1,218 @@
+import customtkinter as ctk
+from gui_functions import get_mock_position, get_mock_fan_data
+from gui_functions import (
+    set_fan1_duty, set_fan2_duty, toggle_solenoid, toggle_lift,
+    toggle_dc1, toggle_dc2, toggle_dc3, toggle_lights, send_gantry_position,query_all_data, sampling_loop
+    )
+
+def launch_gui():
+    ctk.set_default_color_theme("blue")
+    ctk.set_appearance_mode("light")
+
+    root = ctk.CTk()
+    root.geometry("600x600")
+    root.title("Gantry Control")
+
+    # Helper function to update entry
+    def _update_entry(entry, val):
+        entry.delete(0, "end")
+        entry.insert(0, str(val))
+
+
+    # -- Define these BEFORE you use them --
+    def query_all_data():
+        print("[MOCK] Querying all data...")
+        # Update GUI with mock data here
+        # === REFRESH FUNCTION ===
+    
+    def refresh():
+        _update_entry(cur_x, "0")
+        _update_entry(cur_y, "0")
+        _update_entry(cur_z, "0")
+        _update_entry(next_x, "0")
+        _update_entry(next_y, "0")
+        _update_entry(next_z, "0")
+        _update_entry(rpm1_entry, "0")
+        _update_entry(duty1_entry, "0")
+        _update_entry(rpm2_entry, "0")
+        _update_entry(duty2_entry, "0")
+        combo1.set("0")
+        combo2.set("0")
+        print("[MOCK] All values reset to 0")
+
+    def sampling_loop():
+        print("[MOCK] Sampling loop tick")
+        # Periodic data update logic here
+        if samp_var.get():
+            interval = int(samp_spin.get())
+            root.after(interval * 1000, sampling_loop)
+
+
+    # === Top bar ===
+    top_frame = ctk.CTkFrame(root)
+    top_frame.pack(fill="x", pady=5)
+
+    refresh_btn = ctk.CTkButton(top_frame, text="Refresh", command=refresh)
+    refresh_btn.pack(side="left", padx=5)
+
+    ctrl_var = ctk.BooleanVar()
+    ctrl_chk = ctk.CTkCheckBox(top_frame, text="Enable Control Mode", variable=ctrl_var)
+    ctrl_chk.pack(side="left", padx=5)
+
+    samp_var = ctk.BooleanVar()
+    samp_chk = ctk.CTkCheckBox(top_frame, text="Sampling", variable=samp_var, command=sampling_loop)
+    samp_chk.pack(side="left", padx=5)
+
+    ctk.CTkLabel(top_frame, text="Sampling Time (s):").pack(side="left", padx=5)
+    samp_spin = ctk.CTkComboBox(top_frame, values=[str(i) for i in range(1, 11)], width=50)
+    samp_spin.set("1")
+    samp_spin.pack(side="left", padx=5)
+
+    dark_var = ctk.BooleanVar()
+    def toggle_dark():
+        ctk.set_appearance_mode("dark" if dark_var.get() else "light")
+    dark_chk = ctk.CTkCheckBox(top_frame, text="Dark Mode", variable=dark_var, command=toggle_dark)
+    dark_chk.pack(side="left", padx=5)
+
+    # === Gantry Control ===
+    gantry_frame = ctk.CTkFrame(root)
+    gantry_frame.pack(pady=10)
+
+    ctk.CTkLabel(gantry_frame, text="Gantry Control", font=("Arial", 14, "bold")).grid(row=0, column=0, columnspan=4)
+    for i, label in enumerate(["X", "Y", "Z"]):
+        ctk.CTkLabel(gantry_frame, text=label).grid(row=1, column=i+1)
+
+    ctk.CTkLabel(gantry_frame, text="Enter Target Position").grid(row=2, column=0)
+    x_entry = ctk.CTkEntry(gantry_frame, width=50)
+    y_entry = ctk.CTkEntry(gantry_frame, width=50)
+    z_entry = ctk.CTkEntry(gantry_frame, width=50)
+    x_entry.grid(row=2, column=1)
+    y_entry.grid(row=2, column=2)
+    z_entry.grid(row=2, column=3)
+
+    def safe_send_position():
+        if ctrl_var.get():
+            send_gantry_position(x_entry.get(), y_entry.get(), z_entry.get())
+
+    send_btn = ctk.CTkButton(gantry_frame, text="Send Position", command=safe_send_position)
+    send_btn.grid(row=2, column=4, padx=5)
+
+    ctk.CTkLabel(gantry_frame, text="Current Position").grid(row=3, column=0)
+    cur_x = ctk.CTkEntry(gantry_frame, width=50)
+    cur_y = ctk.CTkEntry(gantry_frame, width=50)
+    cur_z = ctk.CTkEntry(gantry_frame, width=50)
+    cur_x.grid(row=3, column=1)
+    cur_y.grid(row=3, column=2)
+    cur_z.grid(row=3, column=3)
+
+    ctk.CTkLabel(gantry_frame, text="Next Target").grid(row=4, column=0)
+    next_x = ctk.CTkEntry(gantry_frame, width=50)
+    next_y = ctk.CTkEntry(gantry_frame, width=50)
+    next_z = ctk.CTkEntry(gantry_frame, width=50)
+    next_x.grid(row=4, column=1)
+    next_y.grid(row=4, column=2)
+    next_z.grid(row=4, column=3)
+
+    # === Fan Control ===
+    fan_frame = ctk.CTkFrame(root)
+    fan_frame.pack(pady=10)
+
+    ctk.CTkLabel(fan_frame, text="Fan Control", font=("Arial", 14, "bold")).grid(row=0, column=0, columnspan=4)
+
+    ctk.CTkLabel(fan_frame, text="RPM").grid(row=1, column=0)
+    ctk.CTkLabel(fan_frame, text="Duty%").grid(row=1, column=1)
+    rpm1_entry = ctk.CTkEntry(fan_frame, width=70)
+    duty1_entry = ctk.CTkEntry(fan_frame, width=70)
+    rpm1_entry.grid(row=2, column=0)
+    duty1_entry.grid(row=2, column=1)
+    combo1 = ctk.CTkComboBox(fan_frame, values=[str(i) for i in range(0, 101, 10)], width=70)
+    combo1.set("0")
+    combo1.grid(row=3, column=0)
+    def safe_set_fan1():
+        if ctrl_var.get():
+            set_fan1_duty(combo1.get())
+    btn1 = ctk.CTkButton(fan_frame, text="Set Fan 1", width=70, command=safe_set_fan1)
+    btn1.grid(row=3, column=1)
+
+    ctk.CTkLabel(fan_frame, text="RPM").grid(row=1, column=2)
+    ctk.CTkLabel(fan_frame, text="Duty%").grid(row=1, column=3)
+    rpm2_entry = ctk.CTkEntry(fan_frame, width=70)
+    duty2_entry = ctk.CTkEntry(fan_frame, width=70)
+    rpm2_entry.grid(row=2, column=2)
+    duty2_entry.grid(row=2, column=3)
+    combo2 = ctk.CTkComboBox(fan_frame, values=[str(i) for i in range(0, 101, 10)], width=70)
+    combo2.set("0")
+    combo2.grid(row=3, column=2)
+    def safe_set_fan2():
+        if ctrl_var.get():
+            set_fan2_duty(combo2.get())
+    btn2 = ctk.CTkButton(fan_frame, text="Set Fan 2", width=70, command=safe_set_fan2)
+    btn2.grid(row=3, column=3)
+
+    # === Toggle Control ===
+    toggle_frame = ctk.CTkFrame(root)
+    toggle_frame.pack(pady=10)
+
+    ctk.CTkLabel(toggle_frame, text="Toggle Control", font=("Arial", 14, "bold")).grid(row=0, column=0, columnspan=3)
+
+    def update_toggle_status(switch, status_entry, toggle_func):
+        if ctrl_var.get():
+            toggle_func()
+            status_entry.delete(0, "end")
+            status_entry.insert(0, "ON" if switch.get() else "OFF")
+
+    def add_toggle(row, label_text, toggle_func):
+        status = ctk.CTkEntry(toggle_frame, width=50)
+        status.grid(row=row, column=1, padx=5)
+        switch = ctk.CTkSwitch(
+            toggle_frame,
+            text=label_text,
+            command=lambda: update_toggle_status(switch, status, toggle_func)
+        )
+        switch.grid(row=row, column=0, sticky="w", padx=5, pady=2)
+        return switch, status
+
+    solenoid_sw, solenoid_stat = add_toggle(1, "Solenoid", toggle_solenoid)
+    lift_sw, lift_stat = add_toggle(2, "Lift", toggle_lift)
+    dc1_sw, dc1_stat = add_toggle(3, "DC Motor 1", toggle_dc1)
+    dc2_sw, dc2_stat = add_toggle(4, "DC Motor 2", toggle_dc2)
+    dc3_sw, dc3_stat = add_toggle(5, "DC Motor 3", toggle_dc3)
+    light_sw, light_stat = add_toggle(6, "Lights", toggle_lights)
+
+    ctk.CTkButton(root, text="Take Picture", width=100).pack(pady=10)
+
+    def query_all_data():
+        pos = get_mock_position()
+        next_pos = get_mock_position()
+        fan1 = get_mock_fan_data()
+        fan2 = get_mock_fan_data()
+
+        _update_entry(cur_x, pos["X"])
+        _update_entry(cur_y, pos["Y"])
+        _update_entry(cur_z, pos["Z"])
+        _update_entry(next_x, next_pos["X"])
+        _update_entry(next_y, next_pos["Y"])
+        _update_entry(next_z, next_pos["Z"])
+        _update_entry(rpm1_entry, fan1["RPM"])
+        _update_entry(duty1_entry, fan1["Duty"])
+        _update_entry(rpm2_entry, fan2["RPM"])
+        _update_entry(duty2_entry, fan2["Duty"])
+
+    def sampling_loop():
+        if samp_var.get():
+            query_all_data()
+            interval = int(samp_spin.get())
+            root.after(interval * 1000, sampling_loop)
+
+    def _update_entry(widget, value):
+        widget.delete(0, "end")
+        widget.insert(0, str(value))
+
+    # Replace your refresh button and sampling checkbox:
+    top_frame = ctk.CTkFrame(root)
+    top_frame.pack(fill="x", pady=5)
+
+    refresh_btn = ctk.CTkButton(top_frame, text="Refresh", command=query_all_data)
+    refresh_btn.pack(side="left", padx=5)
+
+    root.mainloop()
