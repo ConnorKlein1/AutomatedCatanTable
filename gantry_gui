@@ -1,3 +1,23 @@
+import gantry_gui
+print(gantry_gui.__file__)
+
+
+from gantry_gui import launch_gui
+
+def main():
+    launch_gui()
+
+if __name__ == "__main__":
+    main()
+
+
+
+
+
+
+
+
+
 import customtkinter as ctk
 from gui_functions import get_mock_position, get_mock_fan_data
 from gui_functions import (
