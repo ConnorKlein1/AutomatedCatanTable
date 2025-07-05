@@ -1,11 +1,10 @@
 import random
 import time
-#import board
-#import neopixel
-
+import board
+import neopixel
 
 # Initialize the NeoPixel strip (assuming GPIO 12, 32 LEDs, full brightness)
-#pixels1 = neopixel.NeoPixel(board.D12, 32, brightness=1)
+pixels1 = neopixel.NeoPixel(board.D12, 32, brightness=1)
 
 # Mock safe_send_command if you haven't hooked up yet
 def safe_send_command(cmd):
@@ -64,10 +63,10 @@ def toggle_lights():
     
     if toggle_lights.state:
         # Turn lights ON (example green color)
-        print(f"pixels1.fill((0, 255, 0))  # Green fill")
+        pixels1.fill((0, 255, 0))  # Green fill")
     else:
         # Turn lights OFF
-        print(f"pixels1.fill((0, 0, 0))  # All LEDs off")
+        pixels1.fill((0, 0, 0)) # All LEDs off"
     
     print(f"Toggling lights {state_str}")
    
@@ -118,7 +117,7 @@ def query_all_data(gui):
     print({
         "Current Position": pos,
         "Next Target": next_target,
-        "Fan1": fan1,
+        "Fan1": fan1
         "Fan2": fan2
     })
 
@@ -132,153 +131,32 @@ def sampling_loop(gui):
             interval = 1
         gui.root.after(interval * 1000, lambda: sampling_loop(gui))
 
-
-
-def get_mock_position():
-    return {
-        "X": round(random.uniform(0, 100), 2),
-        "Y": round(random.uniform(0, 100), 2),
-        "Z": round(random.uniform(0, 100), 2)
-    }
-
-def get_mock_fan_data():
-    return {
-        "RPM": random.randint(1000, 5000),
-        "Duty": random.randint(0, 100)
-    }
-
-import random
-import time
-#import board
-#import neopixel
-
-# Initialize the NeoPixel strip (assuming GPIO 12, 32 LEDs, full brightness)
-#pixels1 = neopixel.NeoPixel(board.D12, 32, brightness=1)
-
-# Mock safe_send_command if you haven't hooked up yet
-def safe_send_command(cmd):
-    print(f"[MOCK SEND] {cmd}")
-
-def set_fan1_duty(val):
-    print(f"[MOCK] Setting Fan 1 duty to {val}%")
-
-def set_fan2_duty(val):
-    print(f"[MOCK] Setting Fan 2 duty to {val}%")
-
-def send_gantry_position(x, y, z):
-    print(f"[MOCK] Sending gantry position X:{x}, Y:{y}, Z:{z}")
-
-def toggle_solenoid():
-    if not hasattr(toggle_solenoid, "state"):
-        toggle_solenoid.state = False
-    toggle_solenoid.state = not toggle_solenoid.state
-    state_str = "ON" if toggle_solenoid.state else "OFF"
-    print(f"[MOCK] Toggling solenoid {state_str}")
-
-def toggle_lift():
-    if not hasattr(toggle_lift, "state"):
-        toggle_lift.state = False
-    toggle_lift.state = not toggle_lift.state
-    state_str = "ON" if toggle_lift.state else "OFF"
-    print(f"[MOCK] Toggling lift {state_str}")
-
-def toggle_dc1():
-    if not hasattr(toggle_dc1, "state"):
-        toggle_dc1.state = False
-    toggle_dc1.state = not toggle_dc1.state
-    state_str = "ON" if toggle_dc1.state else "OFF"
-    print(f"[MOCK] Toggling DC Motor 1 {state_str}")
-
-def toggle_dc2():
-    if not hasattr(toggle_dc2, "state"):
-        toggle_dc2.state = False
-    toggle_dc2.state = not toggle_dc2.state
-    state_str = "ON" if toggle_dc2.state else "OFF"
-    print(f"[MOCK] Toggling DC Motor 2 {state_str}")
-
-def toggle_dc3():
-    if not hasattr(toggle_dc3, "state"):
-        toggle_dc3.state = False
-    toggle_dc3.state = not toggle_dc3.state
-    state_str = "ON" if toggle_dc3.state else "OFF"
-    print(f"[MOCK] Toggling DC Motor 3 {state_str}")
-
-def toggle_lights():
-    if not hasattr(toggle_lights, "state"):
-        toggle_lights.state = False  # Initial state OFF
-    
-    toggle_lights.state = not toggle_lights.state  # Toggle the state
-    state_str = "ON" if toggle_lights.state else "OFF"
-    
-    if toggle_lights.state:
-        # Turn lights ON (example green color)
-        print(f"pixels1.fill((0, 255, 0))  # Green fill")
-    else:
-        # Turn lights OFF
-        print(f"pixels1.fill((0, 0, 0))  # All LEDs off")
-    
-    print(f"Toggling lights {state_str}")
-   
-
-
-def _update_entry(entry_widget, value):
-    """Utility to update an entry widget's value"""
-    entry_widget.delete(0, "end")
-    entry_widget.insert(0, str(value))
-
-def query_all_data(gui):
-    """Update GUI with dummy data for testing."""
-    # Generate dummy values
-    pos = {
-        "X": random.randint(0, 100),
-        "Y": random.randint(0, 100),
-        "Z": random.randint(0, 100)
-    }
-    next_target = {
-        "X": random.randint(0, 100),
-        "Y": random.randint(0, 100),
-        "Z": random.randint(0, 100)
-    }
-    fan1 = {
-        "RPM": random.randint(500, 2000),
-        "Duty": random.randint(0, 100)
-    }
-    fan2 = {
-        "RPM": random.randint(500, 2000),
-        "Duty": random.randint(0, 100)
-    }
-
-    # Update GUI entries
-    _update_entry(gui.cur_x, pos["X"])
-    _update_entry(gui.cur_y, pos["Y"])
-    _update_entry(gui.cur_z, pos["Z"])
-
-    _update_entry(gui.next_x, next_target["X"])
-    _update_entry(gui.next_y, next_target["Y"])
-    _update_entry(gui.next_z, next_target["Z"])
-
-    _update_entry(gui.rpm1_entry, fan1["RPM"])
-    _update_entry(gui.duty1_entry, fan1["Duty"])
-
-    _update_entry(gui.rpm2_entry, fan2["RPM"])
-    _update_entry(gui.duty2_entry, fan2["Duty"])
-
-    print({
-        "Current Position": pos,
-        "Next Target": next_target,
-        "Fan1": fan1,
-        "Fan2": fan2
-    })
-
-def sampling_loop(gui):
-    """Run sampling periodically if enabled."""
-    if gui.samp_var.get():
-        query_all_data(gui)
-        try:
-            interval = int(gui.samp_spin.get())
-        except ValueError:
-            interval = 1
-        gui.root.after(interval * 1000, lambda: sampling_loop(gui))
+def set_rgb():
+    if not hasattr(toggle_lights, "state") or not toggle_lights.state:
+        print("[INFO] Lights are OFF. Turn them ON to set RGB values.")
+        return
+        
+    try:
+        r = max(0, min(255, int(r_entry.get())))
+        g = max(0, min(255, int(g_entry.get())))
+        b = max(0, min(255, int(b_entry.get())))
+            
+        pixels1.fill((r, g, b))
+            
+        # Update current RGB display entries
+        cur_r_entry.delete(0, "end")
+        cur_r_entry.insert(0, str(r))
+            
+        cur_g_entry.delete(0, "end")
+        cur_g_entry.insert(0, str(g))
+            
+        cur_b_entry.delete(0, "end")
+        cur_b_entry.insert(0, str(b))
+            
+        print(f"Set RGB to ({r}, {g}, {b})")
+            
+    except ValueError:
+        print("[ERROR] Invalid RGB input. Please enter integers 0-255.")
 
 
 
