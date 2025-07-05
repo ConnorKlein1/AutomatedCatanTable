@@ -73,26 +73,44 @@ def toggle_lights():
    
 
 def test_A():
-    import time
+    num_pixels = len(5)#pixels1)
 
-def test_A():
-    if not hasattr(test_A, "current_idx"):
-        test_A.current_idx = 0  # Initialize first call
+    # === Rotating ring effect ===
+    for i in range(num_pixels * 3):  # Loop around 3 times
+        current_idx = i % num_pixels
+        prev_idx = (current_idx - 1) % num_pixels
 
-    # Turn off previous LED
-    prev_idx = (test_A.current_idx - 1) % 32
-    #pixels1[prev_idx] = (0, 0, 0)  # Off
+        # Turn off previous LED
+        #pixels1[prev_idx] = (0, 0, 0)
 
-    # Turn on current LED
-    #pixels1[test_A.current_idx] = (255, 255, 255)  # White
+        # Turn on current LED (white)
+        #pixels1[current_idx] = (255, 255, 255)
 
+        #pixels1.show()
+
+        time.sleep(0.05)
+
+    # After finishing ring, light all LEDs white for pulsing
+    #pixels1.fill((255, 255, 255))
     #pixels1.show()
 
-    # Advance index
-    test_A.current_idx = (test_A.current_idx + 1) % 32
+    # === Pulsing brightness effect ===
+    for cycle in range(3):  # Number of pulse cycles
+        # Fade out
+        for b in range(100, 0, -5):
+            #pixels1.brightness = b / 100.0
+            #pixels1.show()
+            time.sleep(0.05)
+        # Fade in
+        for b in range(0, 101, 5):
+            #pixels1.brightness = b / 100.0
+            #pixels1.show()
+            time.sleep(0.05)
 
-    # Optional: delay if you want smoother effect
-    time.sleep(0.05)
+    # Cleanup: turn off LEDs, restore brightness
+    #pixels1.fill((0, 0, 0))
+    #pixels1.brightness = 1
+    #pixels1.show()
 
     print(f"Test A done")
 
