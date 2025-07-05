@@ -1,10 +1,11 @@
 import random
 import time
-import board
-import neopixel
+#import board
+#import neopixel
+
 
 # Initialize the NeoPixel strip (assuming GPIO 12, 32 LEDs, full brightness)
-pixels1 = neopixel.NeoPixel(board.D12, 32, brightness=1)
+#pixels1 = neopixel.NeoPixel(board.D12, 32, brightness=1)
 
 # Mock safe_send_command if you haven't hooked up yet
 def safe_send_command(cmd):
@@ -63,14 +64,46 @@ def toggle_lights():
     
     if toggle_lights.state:
         # Turn lights ON (example green color)
-        pixels1.fill((0, 255, 0))  # Green fill")
+        print(f"pixels1.fill((0, 255, 0))  # Green fill")
     else:
         # Turn lights OFF
-        pixels1.fill((0, 0, 0)) # All LEDs off"
+        print(f"pixels1.fill((0, 0, 0))  # All LEDs off")
     
     print(f"Toggling lights {state_str}")
    
 
+def test_A():
+    import time
+
+def test_A():
+    if not hasattr(test_A, "current_idx"):
+        test_A.current_idx = 0  # Initialize first call
+
+    # Turn off previous LED
+    prev_idx = (test_A.current_idx - 1) % 32
+    #pixels1[prev_idx] = (0, 0, 0)  # Off
+
+    # Turn on current LED
+    #pixels1[test_A.current_idx] = (255, 255, 255)  # White
+
+    #pixels1.show()
+
+    # Advance index
+    test_A.current_idx = (test_A.current_idx + 1) % 32
+
+    # Optional: delay if you want smoother effect
+    time.sleep(0.05)
+
+    print(f"Test A done")
+
+def test_B():
+    print(f"Test B done")
+
+def test_C():
+    print(f"Test C done")
+
+def test_D():
+    print(f"Test D done")
 
 def _update_entry(entry_widget, value):
     """Utility to update an entry widget's value"""
@@ -117,7 +150,7 @@ def query_all_data(gui):
     print({
         "Current Position": pos,
         "Next Target": next_target,
-        "Fan1": fan1
+        "Fan1": fan1,
         "Fan2": fan2
     })
 
@@ -137,17 +170,16 @@ def set_rgb(r, g, b):
     g = max(0, min(255, g))
     b = max(0, min(255, b))
 
-    if not hasattr(toggle_lights, "state") or not toggle_lights.state:
-        print("[INFO] Lights are OFF. Turn them ON to set RGB values.")
-        return (0, 0, 0)
-
+    # Example neopixel or mock
     try:
-        pixels1.fill((r, g, b))
-        print(f"Set RGB to ({r}, {g}, {b})")
-    except Exception as e:
-        print(f"[MOCK] Set RGB to ({r}, {g}, {b}) — no hardware or error: {e}")
+        print(f"pixels1.fill((r, g, b))")
+    except:
+        pass  # Or print debug
 
-    return (r, g, b)
+    print(f"Set RGB to ({r}, {g}, {b})")
+
+    return (r, g, b)  # Return final values if GUI wants to update current display
+
 
 def get_mock_position():
     return {
@@ -161,3 +193,4 @@ def get_mock_fan_data():
         "RPM": random.randint(1000, 5000),
         "Duty": random.randint(0, 100)
     }
+
