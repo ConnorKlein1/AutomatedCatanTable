@@ -17,12 +17,11 @@ if __name__ == "__main__":
 
 
 
-
 import customtkinter as ctk
 from gui_functions import (
     set_fan1_duty, set_fan2_duty, toggle_solenoid, toggle_lift,
     toggle_dc1, toggle_dc2, toggle_dc3, toggle_lights, send_gantry_position,
-    get_mock_position, get_mock_fan_data
+    get_mock_position, get_mock_fan_data, set_rgb
 )
 
 def launch_gui():
@@ -76,32 +75,7 @@ def launch_gui():
         _update_entry(cur_b_entry, b)
         print(f"[MOCK] Lights set to RGB ({r}, {g}, {b})")
 
-    def set_rgb():
-        if not hasattr(toggle_lights, "state") or not toggle_lights.state:
-            print("[INFO] Lights are OFF. Turn them ON to set RGB values.")
-            return
-        
-        try:
-            r = max(0, min(255, int(r_entry.get())))
-            g = max(0, min(255, int(g_entry.get())))
-            b = max(0, min(255, int(b_entry.get())))
-            
-            #pixels1.fill((r, g, b))
-            
-            # Update current RGB display entries
-            cur_r_entry.delete(0, "end")
-            cur_r_entry.insert(0, str(r))
-            
-            cur_g_entry.delete(0, "end")
-            cur_g_entry.insert(0, str(g))
-            
-            cur_b_entry.delete(0, "end")
-            cur_b_entry.insert(0, str(b))
-            
-            print(f"Set RGB to ({r}, {g}, {b})")
-            
-        except ValueError:
-            print("[ERROR] Invalid RGB input. Please enter integers 0-255.")
+    
 
     # === Top Controls ===
     top_frame = ctk.CTkFrame(root)
