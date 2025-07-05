@@ -210,6 +210,27 @@ def launch_gui():
     rgb_frame = ctk.CTkFrame(root)
     rgb_frame.pack(pady=10)
 
+    def handle_set_rgb():
+        try:
+            r_val = int(r_entry.get())
+            g_val = int(g_entry.get())
+            b_val = int(b_entry.get())
+    
+            r_val, g_val, b_val = set_rgb(r_val, g_val, b_val)
+    
+            cur_r_entry.delete(0, "end")
+            cur_r_entry.insert(0, str(r_val))
+    
+            cur_g_entry.delete(0, "end")
+            cur_g_entry.insert(0, str(g_val))
+    
+            cur_b_entry.delete(0, "end")
+            cur_b_entry.insert(0, str(b_val))
+    
+        except ValueError:
+            print("[ERROR] Invalid RGB input. Please enter integers 0-255.")
+
+
     ctk.CTkLabel(rgb_frame, text="RGB Control", font=("Arial", 14, "bold")).grid(row=0, column=0, columnspan=4, pady=(0, 5))
 
     # Row 1: empty label for alignment + R G B labels
@@ -245,7 +266,7 @@ def launch_gui():
     cur_b_entry.grid(row=3, column=3, padx=5, pady=(5, 0))
 
     # Row 4: Set RGB button
-    set_rgb_btn = ctk.CTkButton(rgb_frame, text="Set RGB", width=150, command=set_rgb)
+    set_rgb_btn = ctk.CTkButton(rgb_frame, text="Set RGB", width=150, command=handle_set_rgb)
     set_rgb_btn.grid(row=4, column=1, columnspan=3,sticky="ew", pady=5)
 
 
