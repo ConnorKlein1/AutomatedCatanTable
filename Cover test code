@@ -1,0 +1,46 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Mar 29 10:02:56 2024
+
+@author: Owen Porpora
+"""
+import time
+import RPi.GPIO as GPIO
+from adafruit_motorkit import MotorKit
+from adafruit_motor import stepper
+
+# 0.2 mm per step
+distance_per_step = 0.2
+
+kit1 = MotorKit(address=0x60)
+
+def move_cover(x_cord):
+    global current_position_cover
+
+    print(f"Last X position was location: {current_position_cover['x']} mm")
+
+    target_distance_x = x_cord - current_position_cover['x']
+
+    target_steps_x = int(abs(target_distance_x) / distance_per_step)
+
+
+    print(f"delta X to move to new position: {target_distance_x} mm")
+
+    direction_1 = stepper.BACKWARD if target_distance_x > 0 else stepper.FORWARD
+
+    target_steps_x = abs(int(target_steps_x))
+
+    try:
+        for i in target_steps_x :
+            if i <= target_steps_x:
+                kit1.stepper1.onestep(direction=direction_1, style=stepper.DOUBLE)
+                time.sleep(0.001)
+    except Exception as e:
+        print(f"Error during motor movement: {e}")
+        # Handle the error or exit the program
+
+    current_position_cover['x'] += target_distance_x
+
+
+    print(f"New position at: {current_position_cover['x']} mm")
+

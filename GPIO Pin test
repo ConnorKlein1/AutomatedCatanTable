@@ -1,0 +1,36 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Feb  2 12:00:39 2024
+
+@author: Owen Porpora
+"""
+
+import RPi.GPIO as GPIO
+import time
+
+# Define the GPIO pin for the gate valve
+GATE_VALVE_PIN = 17 # You should replace this with the actual GPIO pin number you are using
+
+# Setup GPIO mode
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(GATE_VALVE_PIN, GPIO.OUT)
+
+def set_gate_valve_low():
+    GPIO.output(GATE_VALVE_PIN, GPIO.LOW)
+    print("Gate Valve state low")
+
+def set_gate_valve_high():
+    GPIO.output(GATE_VALVE_PIN, GPIO.HIGH)
+    print("Gate Valve state high")
+
+# Example usage
+try:
+    set_gate_valve_high()  # Set the gate valve to high
+    time.sleep(10)  # Sleep for 2 seconds
+    set_gate_valve_low()  # Set the gate valve to low
+
+except KeyboardInterrupt:
+    print("Script terminated by user")
+
+finally:
+    GPIO.cleanup()  # Clean up GPIO on exit

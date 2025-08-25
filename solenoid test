@@ -1,0 +1,20 @@
+import time
+import RPi.GPIO as GPIO
+from adafruit_motorkit import MotorKit
+from adafruit_motor import stepper
+
+kit3 = MotorKit(address=0x62)
+
+def solenoid_test():
+    kit3.motor1.throttle = 1.0
+    time.sleep(2)
+    kit3.motor1.throttle = 0
+    
+solenoid_test()
+        
+        
+        
+        
+        
+        
+        

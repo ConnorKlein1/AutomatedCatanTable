@@ -1,0 +1,53 @@
+import time
+import RPi.GPIO as GPIO
+from adafruit_motorkit import MotorKit
+
+# Vaccum Constants
+pick_suck_time = 3.0
+pick_blow_time = 0.5
+place_blow_time = 1.0
+
+# Setup GPIO mode
+GATE_VALVE_Blow = 6
+GATE_VALVE_Suck = 13 
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(GATE_VALVE_Blow, GPIO.OUT)
+GPIO.setup(GATE_VALVE_Suck, GPIO.OUT)
+
+kit2 = MotorKit(address=0x61)
+
+# Function to set the gate valve low
+def set_gate_valve_blow():
+    GPIO.output(GATE_VALVE_Suck, GPIO.LOW)
+    GPIO.output(GATE_VALVE_Blow, GPIO.HIGH)
+    print("Gate Valve state low")
+
+# Function to set the gate valve high
+def set_gate_valve_suck():
+    GPIO.output(GATE_VALVE_Blow, GPIO.LOW)
+    GPIO.output(GATE_VALVE_Suck, GPIO.HIGH)
+    print("Gate Valve state high")
+
+# Function to execute the pick sequence
+def pick():
+    set_gate_valve_blow()
+    kit2.motor2.throttle = 1.0
+    time.sleep(pick_blow_time)
+    set_gate_valve_suck()
+    time.sleep(pick_suck_time)
+
+# Function to execute the place sequence
+def place():
+    set_gate_valve_blow()
+    kit2.motor2.throttle = 1.0
+    time.sleep(place_blow_time)
+    kit2.motor2.throttle = 0
+
+# Run pick function
+pick()
+
+# Wait for one second
+time.sleep(1)
+
+# Run place function
+place()

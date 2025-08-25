@@ -1,0 +1,254 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Mar  6 11:38:39 2024
+
+@author: Owen Porpora
+"""
+
+import time
+import RPi.GPIO as GPIO
+from adafruit_motorkit import MotorKit
+from adafruit_motor import stepper
+
+# Vaccum Constants
+pick_suck_time = 3.0
+pick_blow_time = 0.5
+place_blow_time = 1.0
+
+#peice counters
+hex_count = 0
+num_count = 0
+# 0.2 mm per step
+distance_per_step = 0.2
+
+# Replace with the actual initial position
+current_position_gripper_z = 0
+place_hex_x = 225
+place_hex_y = 325
+home_position_x = 0
+home_position_y = 0
+current_position_gantry_x = {'x': home_position_x}
+current_position_gantry_y = {'y': home_position_y}
+
+# Setup GPIO mode
+GATE_VALVE_Blow = 6
+GATE_VALVE_Suck = 13 
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(GATE_VALVE_Blow, GPIO.OUT)
+GPIO.setup(GATE_VALVE_Suck, GPIO.OUT)
+
+kit1 = MotorKit(address=0x60)
+kit2 = MotorKit(address=0x61)
+
+# Function to set the gate valve low
+def set_gate_valve_blow():
+    GPIO.output(GATE_VALVE_Blow, GPIO.LOW)
+   
+    print("Gate Valve state blow")
+
+# Function to set the gate valve high
+def set_gate_valve_suck():
+    
+    GPIO.output(GATE_VALVE_Blow, GPIO.HIGH)
+    print("Gate Valve state Suck")
+
+# Function to execute the place sequence
+def pick(gamepiece):
+    if gamepiece in ["num", "hex"]:
+        set_gate_valve_suck()
+        kit2.motor3.throttle = 1.0
+        move_z_axis(gamepiece)
+        time.sleep(0.1)
+    elif gamepiece in ["settlement", "city", "road", "robber"]:
+        set_gate_valve_blow()
+        kit2.motor4.throttle = .75
+        time.sleep(1.5)
+        move_z_axis(gamepiece)
+        kit2.motor4.throttle = 0
+        set_gate_valve_suck()
+        kit2.motor3.throttle = 1.0
+        time.sleep(3)
+    else:
+        print("Invalid gamepiece type")
+
+
+# Function to execute the place sequence
+def place(gamepiece):
+    if gamepiece in ["num", "hex"]:
+        kit2.motor3.throttle = 0
+        set_gate_valve_blow()
+        kit2.motor4.throttle = 1.0
+        time.sleep(0.4)
+        kit2.motor4.throttle = 0
+    elif gamepiece in ["settlement", "city", "road", "robber"]:
+        kit2.motor3.throttle = 0
+        set_gate_valve_blow()
+        kit2.motor4.throttle = 1.0
+        time.sleep(2)
+        kit2.motor4.throttle = 0
+        
+# Function to move Z-axis to a specified position
+def move_z_axis(gamepiece):
+    global current_position_gripper_z
+    global hex_count
+    global num_count
+    print(f"Last Z Gripper position was at: {current_position_gripper_z} mm")
+
+    # Define position mappings relative to home position
+    gamepiece_mappings = {
+        "settlement": -5,
+        "city": -6,
+        "road": -25,
+        "robber": -8,
+        "num": 32,
+        "hex": 30,
+        "hex pick": 4,
+        "midpoint": -9,
+        "hex stack": 30,
+        "num stack": 32,
+        "home": 0  # Adjust home position if necessary
+    }
+
+    # Update hex stack position based on the current hex count
+    gamepiece_mappings["hex stack"] = 30 + hex_count
+    
+    if gamepiece in gamepiece_mappings:
+        target_position = gamepiece_mappings[gamepiece]
+        print(f"Moving Z-axis to {gamepiece} position")
+        
+           
+        # Calculate target steps and direction
+        target_steps = int(abs(target_position - current_position_gripper_z) / distance_per_step)
+        direction = stepper.FORWARD if target_position > current_position_gripper_z else stepper.BACKWARD
+        
+        
+        try:
+            for i in range(target_steps):
+                kit2.stepper1.onestep(direction=direction, style=stepper.DOUBLE)
+                time.sleep(0.001)
+            
+            # Update current position
+            current_position_gripper_z = target_position
+            print(f"Z-axis moved to {gamepiece} position successfully.")
+            
+        except Exception as e:
+            print(f"Error during motor movement: {e}")
+            # Handle the error or exit the program
+    else:
+        print("Invalid input position")
+
+# Function to move XY-axis to a specified position Simultaneously
+def move_xy_axis(x_cord, y_cord):
+    global current_position_gantry_x
+    global current_position_gantry_y
+
+    print(f"Last X position was location: {current_position_gantry_x['x']} mm")
+    print(f"Last Y position was location: {current_position_gantry_y['y']} mm")
+
+    target_distance_x = x_cord - current_position_gantry_x['x']
+    target_distance_y = y_cord - current_position_gantry_y['y']
+
+    target_steps_x = int(abs(target_distance_x) / distance_per_step)
+    target_steps_y = int(abs(target_distance_y) / distance_per_step)
+
+    print(f"delta X to move to new position: {target_distance_x} mm")
+    print(f"delta Y to move to new position: {target_distance_y} mm")
+
+    direction_1 = stepper.BACKWARD if target_distance_x > 0 else stepper.FORWARD
+    direction_2 = stepper.BACKWARD if target_distance_y > 0 else stepper.FORWARD
+
+    target_steps_x = abs(int(target_steps_x))
+    target_steps_y = abs(int(target_steps_y))
+
+    # Move both X and Y axis motors simultaneously
+    try:
+        for i in range(max(target_steps_x, target_steps_y)):
+            if i <= target_steps_x:
+                kit1.stepper1.onestep(direction=direction_1, style=stepper.DOUBLE)
+            if i <= target_steps_y:
+                kit1.stepper2.onestep(direction=direction_2, style=stepper.DOUBLE)
+            time.sleep(0.001)
+    except Exception as e:
+        print(f"Error during motor movement: {e}")
+        # Handle the error or exit the program
+
+    current_position_gantry_x['x'] += target_distance_x
+    current_position_gantry_y['y'] += target_distance_y
+
+    print(f"New position at: {current_position_gantry_x['x']} mm")
+    print(f"New position at: {current_position_gantry_y['y']} mm")
+
+
+#pick hex & num logic
+def pick_and_place_numhex(gamepiece, x_cord, y_cord):
+    global hex_count
+    global num_count
+    if gamepiece == "hex" or gamepiece == "num":
+        move_xy_axis(x_cord, y_cord)
+        pick(gamepiece)
+        move_z_axis("hex pick")
+        move_xy_axis(place_hex_x,place_hex_y)           #move XY cord
+        move_z_axis("hex stack")
+        place(gamepiece)
+        move_z_axis("home")
+        hex_count +=1
+    else:
+        print("Invalid shape specified.")
+        
+#pick buildings logic
+def pick_and_place_buildings(gamepiece, x_cord, y_cord):
+    if gamepiece != "hex" and gamepiece != "num":
+        move_xy_axis(x_cord, y_cord)
+        pick(gamepiece)  
+        move_z_axis("home")
+        move_xy_axis(place_hex_x,place_hex_y)          #move XY cord
+        move_z_axis("midpoint")
+        place(gamepiece)  
+        move_z_axis("home")
+    else:
+        print("Invalid shape specified.")
+        
+
+# Modified pick and place function for picking from stacks
+def pick_from_stack(gamepiece, x_cord, y_cord):
+    global hex_count
+    global num_count
+    if gamepiece == "hex" or gamepiece == "hex stack":
+        if gamepiece == "hex":
+            move_xy_axis(225, 325)
+            move_z_axis("hex stack")
+            pick(gamepiece)
+            move_z_axis("hex pick")
+            move_xy_axis(x_cord,y_cord)
+            move_z_axis(gamepiece)
+            place(gamepiece)
+            move_z_axis("home")
+            hex_count -= 1
+        elif gamepiece == "num":
+            move_z_axis("num stack")
+            pick(gamepiece)
+            move_z_axis("home")
+        else:
+            print(f"No {gamepiece} available on the stack.")
+    else:
+        print("Invalid shape specified.")
+
+
+# Call the function with the desired shape
+
+pick_and_place_numhex("hex",100,200)
+pick_and_place_numhex("hex",100,278)
+#pick_and_place_numhex("hex",100,356)
+time.sleep(2)
+pick_from_stack("hex",100,200)
+pick_from_stack("hex",100,278)
+move_xy_axis(0,0)
+
+#pick("hex")
+#move_z_axis("home")
+#gate vale testing 
+#set_gate_valve_blow()
+#kit2.motor3.throttle =1
+#time.sleep(5)
+#kit2.motor3.throttle = 0
+

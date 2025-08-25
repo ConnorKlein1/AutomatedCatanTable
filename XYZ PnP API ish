@@ -1,0 +1,183 @@
+import time
+import RPi.GPIO as GPIO
+from adafruit_motorkit import MotorKit
+from adafruit_motor import stepper
+
+# Place Constants
+track_end_x = 1000
+track_end_y = 800
+track_end_z = 20
+track_start_x = 0
+track_start_y = 0
+track_start_z = 0
+home_position_x = 0
+home_position_y = 0
+home_z = 0
+place_x = 100
+place_y = 50
+current_position_gantry_x = {'x': home_position_x}
+current_position_gantry_y = {'y': home_position_y}
+current_position_gripper_z = home_z
+down = "down"
+
+# 0.2 mm per step
+distance_per_step = 0.2
+
+# Vaccum Constants
+pick_suck_time = 0.2
+pick_blow_time = 0.1
+place_blow_time = 1.0
+
+# Setup GPIO mode
+GATE_VALVE_PIN = 17  # Replace this with the actual GPIO pin number
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(GATE_VALVE_PIN, GPIO.OUT)
+
+# Initialize MotorKit
+kit1 = MotorKit()
+kit2 = MotorKit(address=0x61)
+
+# Function to set the gate valve low
+def set_gate_valve_low():
+    GPIO.output(GATE_VALVE_PIN, GPIO.LOW)
+    print("Gate Valve state low")
+
+# Function to set the gate valve high
+def set_gate_valve_high():
+    GPIO.output(GATE_VALVE_PIN, GPIO.HIGH)
+    print("Gate Valve state high")
+
+# Function to execute the place sequence
+def pick(gamepiece):
+    if gamepiece in ["num", "hex"]:
+        set_gate_valve_1_suck()
+        kit2.motor3.throttle = 1.0
+        time.sleep(0.1)
+    elif gamepiece in ["settlement", "city", "road", "robber"]:
+        #set_gate_valve_2_blow()
+        #kit2.motor1.throttle = 0.5
+        #time.sleep(1)
+        #kit2.motor1.throttle = 0
+        set_gate_valve_2_suck()
+        kit2.motor3.throttle = 1.0
+        time.sleep(2)
+    else:
+        print("Invalid gamepiece type")
+
+# Function to execute the place sequence
+def place(gamepiece):
+    if gamepiece in ["num", "hex"]:
+        kit2.motor3.throttle = 0
+        set_gate_valve_1_blow()
+        kit2.motor4.throttle = 1.0
+        time.sleep(0.25)
+        kit2.motor3.throttle = 0
+    elif gamepiece in ["settlement", "city", "road", "robber"]:
+        kit2.motor3.throttle = 0
+        set_gate_valve_2_blow()
+        kit2.motor4.throttle = 1.0
+        time.sleep(1)
+        kit2.motor4.throttle = 0
+        
+# Function to move Z-axis to a specified position
+def move_z_axis(gamepiece):
+    global current_position_gripper_z
+    print(f"Last Z Gripper position was at: {current_position_gripper_z} mm")
+
+    # Define position mappings relative to home position
+    gamepiece_mappings = {
+        "settlement": -5,
+        "city": -6,
+        "road": -22,
+        "robber": -8,
+        "num": 18,
+        "hex": 18,
+        "home": 0  # Adjust home position if necessary
+    }
+
+    if gamepiece in gamepiece_mappings:
+        target_position = gamepiece_mappings[gamepiece]
+        print(f"Moving Z-axis to {gamepiece} position")
+        
+        # Calculate target steps and direction
+        target_steps = int(abs(target_position - current_position_gripper_z) / distance_per_step)
+        direction = stepper.FORWARD if target_position > current_position_gripper_z else stepper.BACKWARD
+
+        try:
+            for i in range(target_steps):
+                kit2.stepper1.onestep(direction=direction, style=stepper.DOUBLE)
+                time.sleep(0.001)
+            
+            # Update current position
+            current_position_gripper_z = target_position
+            print(f"Z-axis moved to {gamepiece} position successfully.")
+            
+        except Exception as e:
+            print(f"Error during motor movement: {e}")
+            # Handle the error or exit the program
+    else:
+        print("Invalid input position")
+# Function to move XY-axis to a specified position Simultaneously
+def move_xy_axis(x_cord, y_cord):
+    global current_position_gantry_x
+    global current_position_gantry_y
+
+    print(f"Last X position was location: {current_position_gantry_x['x']} mm")
+    print(f"Last Y position was location: {current_position_gantry_y['y']} mm")
+
+    target_distance_x = x_cord - current_position_gantry_x['x']
+    target_distance_y = y_cord - current_position_gantry_y['y']
+
+    target_steps_x = int(abs(target_distance_x) / distance_per_step)
+    target_steps_y = int(abs(target_distance_y) / distance_per_step)
+
+    print(f"delta X to move to new position: {target_distance_x} mm")
+    print(f"delta Y to move to new position: {target_distance_y} mm")
+
+    direction_1 = stepper.BACKWARD if target_distance_x > 0 else stepper.FORWARD
+    direction_2 = stepper.BACKWARD if target_distance_y > 0 else stepper.FORWARD
+
+    target_steps_x = abs(int(target_steps_x))
+    target_steps_y = abs(int(target_steps_y))
+
+    # Move both X and Y axis motors simultaneously
+    try:
+        for i in range(max(target_steps_x, target_steps_y)):
+            if i <= target_steps_x:
+                kit1.stepper1.onestep(direction=direction_1, style=stepper.DOUBLE)
+            if i <= target_steps_y:
+                kit1.stepper2.onestep(direction=direction_2, style=stepper.DOUBLE)
+            time.sleep(0.001)
+    except Exception as e:
+        print(f"Error during motor movement: {e}")
+        # Handle the error or exit the program
+
+    current_position_gantry_x['x'] += target_distance_x
+    current_position_gantry_y['y'] += target_distance_y
+
+    print(f"New position at: {current_position_gantry_x['x']} mm")
+    print(f"New position at: {current_position_gantry_y['y']} mm")
+
+# Input lists of absolute positions for X and Y
+positions_list_x = input("Enter a list of X positions (comma-separated) in millimeters: ").split(',')
+positions_list_y = input("Enter a list of Y positions (comma-separated) in millimeters: ").split(',')
+
+# Check if the input lists have the same length
+if len(positions_list_x) != len(positions_list_y):
+    print("Error: X and Y position lists must have the same length.")
+else:
+    # Convert string values to integers
+    positions_list_x = [int(position_x) for position_x in positions_list_x]
+    positions_list_y = [int(position_y) for position_y in positions_list_y]
+
+    # Move to each position in the lists sequentially
+    for x_cord, y_cord in zip(positions_list_x, positions_list_y):
+        move_xy_axis(x_cord, y_cord)
+        move_z_axis(down)
+        pick()
+        time.sleep(2)  # Wait for 2 seconds between movements
+        move_z_axis("up")  # Assuming you need to move the gripper up after picking
+        move_xy_axis(100, 300)
+        move_z_axis(down)
+        place()
+    move_xy_axis(0, 0)

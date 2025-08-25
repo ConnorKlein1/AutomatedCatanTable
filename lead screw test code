@@ -1,0 +1,71 @@
+import time
+import RPi.GPIO as GPIO
+"""
+with a 2mm pitch & 200 step per rev we would expect distance per step to be 0.2mm we are getting 0.4mm 
+"""
+
+
+# Pin assignments
+MOTOR_DIRECTION_PIN = 24  # DIR
+MOTOR_STEP_PIN = 23  # STP
+distance_per_step = 0.01
+
+def setup_gpio():
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setup(MOTOR_DIRECTION_PIN, GPIO.OUT)  # Direction
+    GPIO.setup(MOTOR_STEP_PIN, GPIO.OUT)       # Step
+
+def set_direction(direction):
+    if direction == 'up':
+        GPIO.output(MOTOR_DIRECTION_PIN, GPIO.LOW)   # Set to LOW for counterclockwise
+    elif direction == 'down':
+        GPIO.output(MOTOR_DIRECTION_PIN, GPIO.HIGH)  # Set to HIGH for clockwise
+    else:
+        print("Invalid direction. Please enter 'up' or 'down'.")
+        return
+
+def step_motor(steps, step_delay=0.001):
+    GPIO.output(MOTOR_STEP_PIN, GPIO.HIGH)
+    time.sleep(step_delay)
+    GPIO.output(MOTOR_STEP_PIN, GPIO.LOW)
+    time.sleep(step_delay)
+
+def cleanup_gpio():
+    GPIO.cleanup()
+
+def move_to_position(position):
+    try:
+        setup_gpio()
+
+        # Set direction based on the position
+        set_direction('up' if position > 0 else 'down')
+
+        # Calculate the number of steps required
+        steps = int(abs(position) / distance_per_step)
+
+        # Move the motor
+        for _ in range(steps):
+            step_motor(1)
+
+    except KeyboardInterrupt:
+        print("Program interrupted by the user.")
+    finally:
+        cleanup_gpio()
+
+if __name__ == "__main__":
+    try:
+        setup_gpio()
+
+        # Input a list of positions from the user
+        positions_list = input("Enter a list of positions (comma-separated) in millimeters: ")
+        positions_list = [int(position) for position in positions_list.split(',')]
+
+        # Move to each position in the list sequentially
+        for new_position in positions_list:
+            move_to_position(new_position)
+            time.sleep(5)  # Wait for 5 seconds between movements
+
+    except ValueError:
+        print("Invalid input. Please enter a valid list of positions.")
+    finally:
+        cleanup_gpio()

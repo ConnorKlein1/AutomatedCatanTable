@@ -1,0 +1,104 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Feb 19 19:06:24 2024
+
+@author: Owen Porpora
+"""
+
+import time
+import RPi.GPIO as GPIO
+from adafruit_motorkit import MotorKit
+from adafruit_motor import stepper
+
+# Vaccum Constants
+pick_suck_time = 3.0
+pick_blow_time = 0.5
+place_blow_time = 1.0
+
+# 0.2 mm per step
+distance_per_step = 0.2
+
+# Replace with the actual initial position
+current_position_gripper_z = 0
+
+# Setup GPIO mode
+GATE_VALVE_Blow = 6
+GATE_VALVE_Suck = 13 
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(GATE_VALVE_Blow, GPIO.OUT)
+GPIO.setup(GATE_VALVE_Suck, GPIO.OUT)
+
+kit2 = MotorKit(address=0x61)
+
+# Function to set the gate valve low
+def set_gate_valve_blow():
+    GPIO.output(GATE_VALVE_Suck, GPIO.LOW)
+    GPIO.output(GATE_VALVE_Blow, GPIO.HIGH)
+    print("Gate Valve state blow")
+
+# Function to set the gate valve high
+def set_gate_valve_suck():
+    GPIO.output(GATE_VALVE_Blow, GPIO.LOW)
+    GPIO.output(GATE_VALVE_Suck, GPIO.HIGH)
+    print("Gate Valve state Suck")
+
+# Function to execute the pick sequence
+def pick():
+    set_gate_valve_blow()
+    kit2.motor2.throttle = 1.0
+    time.sleep(5)
+    kit2.motor2.throttle = 0
+    set_gate_valve_suck()
+    kit2.motor3.throttle = 1.0
+    time.sleep(7)
+    kit2.motor3.throttle = 0
+
+# Function to execute the place sequence
+def place():
+    set_gate_valve_blow()
+    kit2.motor2.throttle = 1.0
+    time.sleep(1)
+    kit2.motor2.throttle = 0
+
+# Function to move Z-axis to a specified position
+def move_z_axis(position):
+    global current_position_gripper_z
+    print(f"Last z Gripper position was location: {current_position_gripper_z} mm")
+
+    target_distance_top = 5 - current_position_gripper_z
+    target_distance_bottom = -5 - current_position_gripper_z
+
+    if position == "down":
+        print("Moving Z-axis down")
+        target_steps = int(abs(target_distance_top) / distance_per_step)
+        direction = stepper.BACKWARD  # Adjust as needed
+    else:
+        print("Moving Z-axis up")
+        target_steps = int(abs(target_distance_bottom) / distance_per_step)
+        direction = stepper.FORWARD  # Adjust as needed
+
+    try:
+        for i in range(target_steps):
+            kit2.stepper1.onestep(direction=direction, style=stepper.DOUBLE)  # Adjust style as needed
+            time.sleep(0.001)
+    except Exception as e:
+        print(f"Error during motor movement: {e}")
+        # Handle the error or exit the program
+
+    current_position_gripper_z += target_distance_top if position == "down" else target_distance_bottom
+    print(f"New Gripper position at: {current_position_gripper_z} mm")
+
+
+move_z_axis("down")
+
+
+pick()
+
+
+time.sleep(1)
+
+
+move_z_axis("up")
+
+
+place()

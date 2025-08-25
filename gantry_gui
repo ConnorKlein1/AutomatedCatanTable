@@ -1,0 +1,243 @@
+import gantry_gui
+print(gantry_gui.__file__)
+
+
+from gantry_gui import launch_gui
+
+def main():
+    launch_gui()
+
+if __name__ == "__main__":
+    main()
+
+
+
+
+
+
+import customtkinter as ctk
+from gui_functions import (
+    set_fan1_duty, set_fan2_duty, toggle_solenoid, toggle_lift,
+    toggle_dc1, toggle_dc2, toggle_dc3, toggle_lights, send_gantry_position,
+    get_mock_position, get_mock_fan_data, set_rgb, test_A, test_B, test_C, test_D
+)
+
+def launch_gui():
+    ctk.set_default_color_theme("blue")
+    ctk.set_appearance_mode("light")
+
+    root = ctk.CTk()
+    root.geometry("900x700")
+    root.title("Gantry Control")
+
+
+    def _update_entry(widget, value):
+        widget.delete(0, "end")
+        widget.insert(0, str(value))
+    
+    def refresh():
+        for w in [cur_x, cur_y, cur_z, next_x, next_y, next_z,
+                  rpm1_entry, duty1_entry, rpm2_entry, duty2_entry,
+                  r_entry, g_entry, b_entry, cur_r_entry, cur_g_entry, cur_b_entry]:
+            _update_entry(w, "0")
+        combo1.set("0")
+        combo2.set("0")
+        print("[MOCK] All values reset to 0")
+
+    def query_all_data():
+        pos = get_mock_position()
+        next_pos = get_mock_position()
+        fan1 = get_mock_fan_data()
+        fan2 = get_mock_fan_data()
+
+        _update_entry(cur_x, pos["X"])
+        _update_entry(cur_y, pos["Y"])
+        _update_entry(cur_z, pos["Z"])
+        _update_entry(next_x, next_pos["X"])
+        _update_entry(next_y, next_pos["Y"])
+        _update_entry(next_z, next_pos["Z"])
+        _update_entry(rpm1_entry, fan1["RPM"])
+        _update_entry(duty1_entry, fan1["Duty"])
+        _update_entry(rpm2_entry, fan2["RPM"])
+        _update_entry(duty2_entry, fan2["Duty"])
+
+    def sampling_loop():
+        if samp_var.get():
+            query_all_data()
+            root.after(int(samp_spin.get()) * 1000, sampling_loop)
+
+    def handle_set_rgb():
+        try:
+            r_val = int(r_entry.get())
+            g_val = int(g_entry.get())
+            b_val = int(b_entry.get())
+            r_val, g_val, b_val = set_rgb(r_val, g_val, b_val)
+            _update_entry(cur_r_entry, r_val)
+            _update_entry(cur_g_entry, g_val)
+            _update_entry(cur_b_entry, b_val)
+        except ValueError:
+            print("[ERROR] Invalid RGB input. Please enter integers 0-255.")
+
+    # === Top Controls ===
+    top_frame = ctk.CTkFrame(root)
+    top_frame.pack(fill="x", pady=5)
+
+    ctk.CTkButton(top_frame, text="Refresh", command=refresh).pack(side="left", padx=5)
+
+    ctrl_var = ctk.BooleanVar()
+    ctk.CTkCheckBox(top_frame, text="Enable Control Mode", variable=ctrl_var).pack(side="left", padx=5)
+
+    samp_var = ctk.BooleanVar()
+    ctk.CTkCheckBox(top_frame, text="Sampling", variable=samp_var, command=sampling_loop).pack(side="left", padx=5)
+
+    ctk.CTkLabel(top_frame, text="Sampling Time (s):").pack(side="left", padx=5)
+    samp_spin = ctk.CTkComboBox(top_frame, values=[str(i) for i in range(1, 11)], width=50)
+    samp_spin.set("1")
+    samp_spin.pack(side="left", padx=5)
+
+    dark_var = ctk.BooleanVar()
+    ctk.CTkCheckBox(top_frame, text="Dark Mode", variable=dark_var,
+                    command=lambda: ctk.set_appearance_mode("dark" if dark_var.get() else "light")).pack(side="left", padx=5)
+
+    # === Gantry Control ===
+    gantry_frame = ctk.CTkFrame(root)
+    gantry_frame.pack(pady=10)
+
+    ctk.CTkLabel(gantry_frame, text="Gantry Control", font=("Arial", 14, "bold")).grid(row=0, column=0, columnspan=4)
+    for i, label in enumerate(["X", "Y", "Z"]):
+        ctk.CTkLabel(gantry_frame, text=label).grid(row=1, column=i+1)
+
+    ctk.CTkLabel(gantry_frame, text="Enter Target Position").grid(row=2, column=0)
+    x_entry = ctk.CTkEntry(gantry_frame, width=50)
+    y_entry = ctk.CTkEntry(gantry_frame, width=50)
+    z_entry = ctk.CTkEntry(gantry_frame, width=50)
+    x_entry.grid(row=2, column=1)
+    y_entry.grid(row=2, column=2)
+    z_entry.grid(row=2, column=3)
+
+    def safe_send_position():
+        if ctrl_var.get():
+            send_gantry_position(x_entry.get(), y_entry.get(), z_entry.get())
+
+    ctk.CTkButton(gantry_frame, text="Send Position", command=safe_send_position).grid(row=2, column=4, padx=5)
+
+    ctk.CTkLabel(gantry_frame, text="Current Position").grid(row=3, column=0)
+    cur_x = ctk.CTkEntry(gantry_frame, width=50)
+    cur_y = ctk.CTkEntry(gantry_frame, width=50)
+    cur_z = ctk.CTkEntry(gantry_frame, width=50)
+    cur_x.grid(row=3, column=1)
+    cur_y.grid(row=3, column=2)
+    cur_z.grid(row=3, column=3)
+
+    ctk.CTkLabel(gantry_frame, text="Next Target").grid(row=4, column=0)
+    next_x = ctk.CTkEntry(gantry_frame, width=50)
+    next_y = ctk.CTkEntry(gantry_frame, width=50)
+    next_z = ctk.CTkEntry(gantry_frame, width=50)
+    next_x.grid(row=4, column=1)
+    next_y.grid(row=4, column=2)
+    next_z.grid(row=4, column=3)
+
+    # === Toggle + Test container ===
+    toggle_test_container = ctk.CTkFrame(root)
+    toggle_test_container.pack(pady=10)
+
+    # Toggle Control
+    toggle_frame = ctk.CTkFrame(toggle_test_container)
+    toggle_frame.grid(row=0, column=0, padx=10)
+
+    ctk.CTkLabel(toggle_frame, text="Toggle Control", font=("Arial", 14, "bold")).grid(row=0, column=0, columnspan=2)
+
+    def add_toggle(row, label_text, toggle_func):
+        status = ctk.CTkEntry(toggle_frame, width=50)
+        status.grid(row=row, column=1, padx=5)
+
+        def handler():
+            if ctrl_var.get():
+                toggle_func()
+                is_on = switch.get()
+                status.delete(0, "end")
+                status.insert(0, "ON" if is_on else "OFF")
+            else:
+                print("[INFO] Motor control is disabled. Enable control mode to toggle.")
+
+        switch = ctk.CTkSwitch(toggle_frame, text=label_text, command=handler)
+        switch.grid(row=row, column=0, sticky="w", padx=5, pady=2)
+        return switch, status
+
+
+    add_toggle(1, "Solenoid", toggle_solenoid)
+    add_toggle(2, "Lift", toggle_lift)
+    add_toggle(3, "DC Motor 1", toggle_dc1)
+    add_toggle(4, "DC Motor 2", toggle_dc2)
+    add_toggle(5, "DC Motor 3", toggle_dc3)
+    add_toggle(6, "Lights", toggle_lights)
+
+    # Test Functions
+    test_frame = ctk.CTkFrame(toggle_test_container)
+    test_frame.grid(row=0, column=1, padx=10)
+
+    ctk.CTkLabel(test_frame, text="Test Functions", font=("Arial", 14, "bold")).grid(row=0, column=0, pady=(0, 5))
+    ctk.CTkButton(test_frame, text="Test A", command=lambda: test_A() if ctrl_var.get() else None).grid(row=1, column=0, pady=2)
+    ctk.CTkButton(test_frame, text="Test B", command=lambda: test_B() if ctrl_var.get() else None).grid(row=2, column=0, pady=2)
+    ctk.CTkButton(test_frame, text="Test C", command=lambda: test_C() if ctrl_var.get() else None).grid(row=3, column=0, pady=2)
+    ctk.CTkButton(test_frame, text="Test D", command=lambda: test_D() if ctrl_var.get() else None).grid(row=4, column=0, pady=2)
+                                    
+    fan_frame = ctk.CTkFrame(root)
+    fan_frame.pack(pady=10)
+
+    ctk.CTkLabel(fan_frame, text="Fan Control", font=("Arial", 14, "bold")).grid(row=0, column=0, columnspan=4)
+
+    ctk.CTkLabel(fan_frame, text="RPM").grid(row=1, column=0)
+    ctk.CTkLabel(fan_frame, text="Duty%").grid(row=1, column=1)
+    rpm1_entry = ctk.CTkEntry(fan_frame, width=70)
+    duty1_entry = ctk.CTkEntry(fan_frame, width=70)
+    rpm1_entry.grid(row=2, column=0)
+    duty1_entry.grid(row=2, column=1)
+    combo1 = ctk.CTkComboBox(fan_frame, values=[str(i) for i in range(0, 101, 10)], width=70)
+    combo1.set("0")
+    combo1.grid(row=3, column=0)
+    ctk.CTkButton(fan_frame, text="Set Fan 1", width=70, command=lambda: set_fan1_duty(combo1.get()) if ctrl_var.get() else None).grid(row=3, column=1)
+
+    ctk.CTkLabel(fan_frame, text="RPM").grid(row=1, column=2)
+    ctk.CTkLabel(fan_frame, text="Duty%").grid(row=1, column=3)
+    rpm2_entry = ctk.CTkEntry(fan_frame, width=70)
+    duty2_entry = ctk.CTkEntry(fan_frame, width=70)
+    rpm2_entry.grid(row=2, column=2)
+    duty2_entry.grid(row=2, column=3)
+    combo2 = ctk.CTkComboBox(fan_frame, values=[str(i) for i in range(0, 101, 10)], width=70)
+    combo2.set("0")
+    combo2.grid(row=3, column=2)
+    ctk.CTkButton(fan_frame, text="Set Fan 2", width=70, command=lambda: set_fan2_duty(combo2.get()) if ctrl_var.get() else None).grid(row=3, column=3)
+
+    # === RGB Control ===
+    rgb_frame = ctk.CTkFrame(root)
+    rgb_frame.pack(pady=10)
+
+    ctk.CTkLabel(rgb_frame, text="RGB Control", font=("Arial", 14, "bold")).grid(row=0, column=0, columnspan=4)
+
+    ctk.CTkLabel(rgb_frame, text="R").grid(row=1, column=1)
+    ctk.CTkLabel(rgb_frame, text="G").grid(row=1, column=2)
+    ctk.CTkLabel(rgb_frame, text="B").grid(row=1, column=3)
+
+    r_entry = ctk.CTkEntry(rgb_frame, width=60)
+    g_entry = ctk.CTkEntry(rgb_frame, width=60)
+    b_entry = ctk.CTkEntry(rgb_frame, width=60)
+    for e in [r_entry, g_entry, b_entry]: e.insert(0, "0")
+    r_entry.grid(row=2, column=1, padx=5)
+    g_entry.grid(row=2, column=2, padx=5)
+    b_entry.grid(row=2, column=3, padx=5)
+
+    ctk.CTkLabel(rgb_frame, text="Current RGB:").grid(row=3, column=0)
+    cur_r_entry = ctk.CTkEntry(rgb_frame, width=60)
+    cur_g_entry = ctk.CTkEntry(rgb_frame, width=60)
+    cur_b_entry = ctk.CTkEntry(rgb_frame, width=60)
+    for e in [cur_r_entry, cur_g_entry, cur_b_entry]: e.insert(0, "0")
+    cur_r_entry.grid(row=3, column=1, padx=5)
+    cur_g_entry.grid(row=3, column=2, padx=5)
+    cur_b_entry.grid(row=3, column=3, padx=5)
+
+    ctk.CTkButton(rgb_frame, text="Set RGB", width=150, command=lambda: handle_set_rgb() if ctrl_var.get() else None).grid(row=4, column=1, columnspan=3, sticky="ew", pady=5)
+
+    root.mainloop()
+
+

@@ -1,0 +1,140 @@
+
+
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Jan 26 23:25:37 2024
+
+@author: Owen Porpora
+"""
+
+import time
+import board
+from adafruit_motorkit import MotorKit
+from adafruit_motor import stepper
+
+# Constants
+track_length_x = 1000
+track_length_y = 800
+start_track_x = 0
+start_track_y = 0
+distance_per_step = 0.2  # Distance moved per step in mm
+
+# Load current position from file
+try:
+    with open("current_position_gantry_x.txt", "r") as file:
+        current_position_gantry_x = {'x': int(file.read())}
+except FileNotFoundError:
+    current_position_gantry_x = {'x': 0}
+except Exception as e:
+    print(f"Error reading current position file: {e}")
+    # Handle the error or exit the program
+    
+try:
+    with open("current_position_gantry_y.txt", "r") as file:
+        current_position_gantry_y = {'y': int(file.read())}
+except FileNotFoundError:
+    current_position_gantry_y = {'y': 0}
+except Exception as e:
+    print(f"Error reading current position file: {e}")
+    # Handle the error or exit the program
+
+# Initialize MotorKit
+kit = MotorKit(i2c=board.I2C())
+    
+# Function to move to a specific (x, y) coordinate
+def move_to(new_x, new_y):
+    global current_position_gantry_x
+    global current_position_gantry_y
+    print(f"Last X position was location: {current_position_gantry_x['x']} mm")
+    print(f"Last Y position was location: {current_position_gantry_y['y']} mm")
+    
+    # Bound new_x and new_y within track limits
+    new_x = max(start_track_x, min(new_x, track_length_x))
+    new_y = max(start_track_y, min(new_y, track_length_y))
+    
+    # Calculate the relative movement required for X and Y
+    x_distance = new_x - current_position_gantry_x['x']
+    y_distance = new_y - current_position_gantry_y['y']
+    
+    print(f"delta X is: {x_distance} mm")
+    print(f"delta Y is: {y_distance} mm")
+
+    # Calculate the number of steps required for X and Y
+    x_steps = int(abs(x_distance) / distance_per_step)
+    y_steps = int(abs(y_distance) / distance_per_step)
+    
+    # Move both X and Y axis motors simultaneously
+    try:
+    # Move X axis motor
+        for i in range(x_steps):
+            if x_distance > 0:
+                kit.stepper1.onestep(direction=stepper.FORWARD, style=stepper.DOUBLE)
+            elif x_distance < 0: 
+                kit.stepper1.onestep(direction=stepper.BACKWARD, style=stepper.DOUBLE)
+            else:
+                print("Motor X does not need to move")
+            time.sleep(0.0001)
+    
+        # Move Y axis motor
+        for i in range(y_steps):
+            if y_distance > 0:
+                kit.stepper2.onestep(direction=stepper.FORWARD, style=stepper.DOUBLE)
+            elif y_distance < 0: 
+                kit.stepper2.onestep(direction=stepper.BACKWARD, style=stepper.DOUBLE)
+            else:
+                print("Motor Y does not need to move")
+            time.sleep(0.0001)
+
+    except Exception as e:  
+        print(f"Error during motor movement: {e}")
+    # Handle the error or exit the program
+
+    # Update the current position
+    current_position_gantry_x['x'] = new_x
+    current_position_gantry_y['y'] = new_y
+    print(f"Updated X position: {current_position_gantry_x['x']} mm")
+    print(f"Updated Y position: {current_position_gantry_y['y']} mm")
+
+    # Save current position to file
+    try:
+        with open("current_position_gantry_x.txt", "w") as file_x:
+            file_x.write(str(current_position_gantry_x['x']))
+        with open("current_position_gantry_y.txt", "w") as file_y:
+            file_y.write(str(current_position_gantry_y['y']))
+    except Exception as e:
+        print(f"Error writing current position files: {e}")
+        # Handle the error or exit the program
+
+    # Update the current position
+    current_position_gantry_x['x'] = new_x
+    current_position_gantry_y['y'] = new_y
+    print(f"Updated X position: {current_position_gantry_x['x']} mm")
+    print(f"Updated Y position: {current_position_gantry_y['y']} mm")
+
+    # Save current position to file
+    try:
+        with open("current_position_gantry_x.txt", "w") as file_x:
+            file_x.write(str(current_position_gantry_x['x']))
+        with open("current_position_gantry_y.txt", "w") as file_y:
+            file_y.write(str(current_position_gantry_y['y']))
+    except Exception as e:
+        print(f"Error writing current position files: {e}")
+        # Handle the error or exit the program
+
+# Input lists of absolute positions for X and Y
+positions_list_x = input("Enter a list of X positions (comma-separated) in millimeters: ").split(',')
+positions_list_y = input("Enter a list of Y positions (comma-separated) in millimeters: ").split(',')
+
+# Check if the input lists have the same length
+if len(positions_list_x) != len(positions_list_y):
+    print("Error: X and Y position lists must have the same length.")
+    # Handle the error or exit the program
+else:
+    # Convert string values to integers
+    positions_list_x = [int(position_x) for position_x in positions_list_x]
+    positions_list_y = [int(position_y) for position_y in positions_list_y]
+
+    # Move to each position in the lists sequentially
+    for new_x, new_y in zip(positions_list_x, positions_list_y):
+        move_to(new_x, new_y)
+        time.sleep(5)  # Wait for 5 seconds between movements
